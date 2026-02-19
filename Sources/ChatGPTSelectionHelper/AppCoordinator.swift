@@ -112,7 +112,7 @@ final class AppCoordinator: NSObject {
             isRunning = false
         }
 
-        guard permissionService.hasAccessibilityPermission() else {
+        guard permissionService.hasAccessibilityPermission(promptIfNeeded: true) else {
             errorCode = .permissionMissing
             showAccessibilityPermissionPrompt()
             return
@@ -160,15 +160,33 @@ final class AppCoordinator: NSObject {
 
     @MainActor
     private func showAccessibilityPermissionPrompt() {
-        let alert = NSAlert()
-        alert.messageText = "Accessibility Permission Required"
-        alert.informativeText = "Enable Accessibility for this app in System Settings -> Privacy & Security -> Accessibility."
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: "Open Settings")
-        alert.addButton(withTitle: "Cancel")
-        let response = alert.runModal()
-        if response == .alertFirstButtonReturn {
-            permissionService.openAccessibilitySettings()
+        DispatchQueue.main.async {
+            let alert = NSAlert()
+            alert.messageText = "Accessibility Permission Required"
+            alert.informativeText = """
+            Enable Accessibility for this exact app instance in System Settings -> Privacy & Security -> Accessibility.
+
+            If this app is already listed, toggle it OFF/ON. If it still fails, remove it and add this exact app path again:
+            \(self.permissionService.runningAppIdentitySummary())
+            """
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "Open Settings")
+            alert.addButton(withTitle: "Recheck")
+            alert.addButton(withTitle: "Cancel")
+            let response = alert.runModal()
+            if response == .alertFirstButtonReturn {
+                self.permissionService.openAccessibilitySettings()
+                return
+            }
+            if response == .alertSecondButtonReturn {
+                if self.permissionService.hasAccessibilityPermission(promptIfNeeded: false) {
+                    if self.settings.showToasts {
+                        self.toast.show("Accessibility granted. Trigger the action again.")
+                    }
+                } else if self.settings.showToasts {
+                    self.toast.show("Accessibility still not granted")
+                }
+            }
         }
     }
 
