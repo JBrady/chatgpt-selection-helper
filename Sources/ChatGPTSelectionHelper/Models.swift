@@ -123,7 +123,7 @@ func formatSelection(_ text: String, mode: FormatMode) -> String {
     case .plain:
         return text
     case .quotedContext:
-        return "Quoted context: \"\(text)\""
+        return "Quoted context:\n\"\"\"\n\(text)\n\"\"\""
     case .codeFence:
         return "```\n\(text)\n```"
     }

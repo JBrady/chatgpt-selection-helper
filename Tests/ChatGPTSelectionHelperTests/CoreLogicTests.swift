@@ -5,7 +5,7 @@ struct CoreLogicTests {
     @Test
     func quotedContextFormatting() {
         let formatted = formatSelection("hello", mode: .quotedContext)
-        #expect(formatted == "Quoted context: \"hello\"")
+        #expect(formatted == "Quoted context:\n\"\"\"\nhello\n\"\"\"")
     }
 
     @Test
