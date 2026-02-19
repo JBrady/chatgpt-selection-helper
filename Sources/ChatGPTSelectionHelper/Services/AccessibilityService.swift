@@ -14,12 +14,11 @@ final class AccessibilityService {
             return (selected, .axSelectedText)
         }
 
-        guard let selectedRangeRaw = copyAttribute(kAXSelectedTextRangeAttribute as CFString, from: focused),
+        guard let selectedRangeValue = copyAXValueAttribute(kAXSelectedTextRangeAttribute as CFString, from: focused),
               let fullValue = copyStringAttribute(kAXValueAttribute as CFString, from: focused)
         else {
             return nil
         }
-        let selectedRangeValue = selectedRangeRaw as! AXValue
         guard AXValueGetType(selectedRangeValue) == .cfRange else {
             return nil
         }
@@ -138,11 +137,26 @@ final class AccessibilityService {
         guard CFGetTypeID(value) == AXUIElementGetTypeID() else {
             return nil
         }
-        return unsafeBitCast(value, to: AXUIElement.self)
+        return unsafeDowncast(value, to: AXUIElement.self)
     }
 
     private func copyAXElementArrayAttribute(_ attribute: CFString, from element: AXUIElement) -> [AXUIElement]? {
-        copyAttribute(attribute, from: element) as? [AXUIElement]
+        guard let value = copyAttribute(attribute, from: element),
+              CFGetTypeID(value) == CFArrayGetTypeID(),
+              let rawArray = value as? [AnyObject]
+        else {
+            return nil
+        }
+
+        var elements: [AXUIElement] = []
+        elements.reserveCapacity(rawArray.count)
+        for raw in rawArray {
+            guard CFGetTypeID(raw) == AXUIElementGetTypeID() else {
+                continue
+            }
+            elements.append(unsafeDowncast(raw, to: AXUIElement.self))
+        }
+        return elements
     }
 
     private func copyStringAttribute(_ attribute: CFString, from element: AXUIElement) -> String? {
@@ -151,6 +165,16 @@ final class AccessibilityService {
 
     private func copyBoolAttribute(_ attribute: CFString, from element: AXUIElement) -> Bool? {
         copyAttribute(attribute, from: element) as? Bool
+    }
+
+    private func copyAXValueAttribute(_ attribute: CFString, from element: AXUIElement) -> AXValue? {
+        guard let value = copyAttribute(attribute, from: element) else {
+            return nil
+        }
+        guard CFGetTypeID(value) == AXValueGetTypeID() else {
+            return nil
+        }
+        return unsafeDowncast(value, to: AXValue.self)
     }
 
     private func focusedElement(in app: NSRunningApplication?) -> AXUIElement? {
