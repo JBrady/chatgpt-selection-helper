@@ -5,31 +5,31 @@ final class HotkeyManager {
     private var hotKeyRef: EventHotKeyRef?
     private var eventHandler: EventHandlerRef?
     private var callback: (() -> Void)?
+    nonisolated(unsafe) private static weak var activeManager: HotkeyManager?
 
     func register(_ configuration: HotkeyConfiguration, callback: @escaping () -> Void) {
         unregister()
         self.callback = callback
+        HotkeyManager.activeManager = self
 
         var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
-
-        let userData = UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
 
         InstallEventHandler(
             GetEventDispatcherTarget(),
             { _, event, userData in
-                guard let event, let userData else { return noErr }
-                let manager = Unmanaged<HotkeyManager>.fromOpaque(userData).takeUnretainedValue()
+                guard let event else { return noErr }
+                _ = userData // unused
 
                 var hotKeyID = EventHotKeyID()
                 GetEventParameter(event, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID), nil, MemoryLayout<EventHotKeyID>.size, nil, &hotKeyID)
                 if hotKeyID.id == 1 {
-                    manager.callback?()
+                    HotkeyManager.activeManager?.callback?()
                 }
                 return noErr
             },
             1,
             &eventType,
-            userData,
+            nil,
             &eventHandler
         )
 
@@ -52,6 +52,9 @@ final class HotkeyManager {
         if let eventHandler {
             RemoveEventHandler(eventHandler)
             self.eventHandler = nil
+        }
+        if HotkeyManager.activeManager === self {
+            HotkeyManager.activeManager = nil
         }
         callback = nil
     }

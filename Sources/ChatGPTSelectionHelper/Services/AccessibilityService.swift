@@ -135,7 +135,10 @@ final class AccessibilityService {
         guard let value = copyAttribute(attribute, from: element) else {
             return nil
         }
-        return (value as! AXUIElement)
+        guard CFGetTypeID(value) == AXUIElementGetTypeID() else {
+            return nil
+        }
+        return unsafeBitCast(value, to: AXUIElement.self)
     }
 
     private func copyAXElementArrayAttribute(_ attribute: CFString, from element: AXUIElement) -> [AXUIElement]? {
