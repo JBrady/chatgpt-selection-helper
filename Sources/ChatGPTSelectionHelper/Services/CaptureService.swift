@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 final class CaptureService {
     private let clipboard: ClipboardService
     private let events: EventSynthesizer
@@ -11,11 +12,11 @@ final class CaptureService {
         self.accessibility = accessibility
     }
 
-    func captureSelection(session: ClipboardSession, timeoutMs: Int = 350) -> CaptureResult {
+    func captureSelection(session: ClipboardSession, timeoutMs: Int = 350) async -> CaptureResult {
         let startCount = clipboard.currentChangeCount()
         events.sendCopyShortcut()
 
-        let waitedChange = waitForPasteboardChange(from: startCount, timeoutMs: timeoutMs)
+        let waitedChange = await waitForPasteboardChange(from: startCount, timeoutMs: timeoutMs)
         if let changed = waitedChange {
             session.noteFlowClipboardChange(changed)
         }
@@ -49,11 +50,11 @@ final class CaptureService {
         )
     }
 
-    private func waitForPasteboardChange(from initial: Int, timeoutMs: Int) -> Int? {
-        let sleepInterval: useconds_t = 20_000
+    private func waitForPasteboardChange(from initial: Int, timeoutMs: Int) async -> Int? {
+        let sleepIntervalMs = 20
         let maxAttempts = max(1, timeoutMs / 20)
         for _ in 0..<maxAttempts {
-            usleep(sleepInterval)
+            try? await Task.sleep(nanoseconds: UInt64(sleepIntervalMs) * 1_000_000)
             let current = clipboard.currentChangeCount()
             if current != initial {
                 return current

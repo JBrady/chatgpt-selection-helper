@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 
+@MainActor
 final class ChatGPTDeliveryService {
     private let clipboard: ClipboardService
     private let events: EventSynthesizer
@@ -12,8 +13,8 @@ final class ChatGPTDeliveryService {
         self.accessibility = accessibility
     }
 
-    func deliverText(_ text: String, to bundleID: String, session: ClipboardSession) -> DeliveryResult {
-        guard let app = activateOrLaunch(bundleID: bundleID) else {
+    func deliverText(_ text: String, to bundleID: String, session: ClipboardSession) async -> DeliveryResult {
+        guard let app = await activateOrLaunch(bundleID: bundleID) else {
             return DeliveryResult(
                 focusPath: .assumedFocused,
                 pasteAttempts: 0,
@@ -23,7 +24,7 @@ final class ChatGPTDeliveryService {
             )
         }
 
-        usleep(220_000)
+        await sleepMs(220)
 
         var focusPath: FocusPath = .assumedFocused
         var attempts = 0
@@ -31,7 +32,7 @@ final class ChatGPTDeliveryService {
 
         if accessibility.focusLikelyInputField(in: app) {
             focusPath = .axFocus
-            usleep(80_000)
+            await sleepMs(80)
         }
 
         let beforeFirstPasteLength = accessibility.focusedEditableValueLength(in: app)
@@ -41,7 +42,7 @@ final class ChatGPTDeliveryService {
         latestCount = firstCount
         session.noteFlowClipboardChange(firstCount)
         events.sendPasteShortcut()
-        usleep(150_000)
+        await sleepMs(150)
 
         if verifyPasteSucceeded(in: app, beforeLength: beforeFirstPasteLength) {
             return DeliveryResult(
@@ -70,7 +71,7 @@ final class ChatGPTDeliveryService {
         latestCount = secondCount
         session.noteFlowClipboardChange(secondCount)
         events.sendPasteShortcut()
-        usleep(150_000)
+        await sleepMs(150)
 
         let success = verifyPasteSucceeded(in: app, beforeLength: beforeSecondPasteLength)
         return DeliveryResult(
@@ -93,7 +94,7 @@ final class ChatGPTDeliveryService {
         return accessibility.isFocusedElementEditable(in: app)
     }
 
-    private func activateOrLaunch(bundleID: String) -> NSRunningApplication? {
+    private func activateOrLaunch(bundleID: String) async -> NSRunningApplication? {
         if let running = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first {
             running.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
             return running
@@ -106,19 +107,20 @@ final class ChatGPTDeliveryService {
         let config = NSWorkspace.OpenConfiguration()
         config.activates = true
 
-        let semaphore = DispatchSemaphore(value: 0)
-        var launchedApp: NSRunningApplication?
-
-        NSWorkspace.shared.openApplication(at: appURL, configuration: config) { app, _ in
-            launchedApp = app
-            semaphore.signal()
+        let launchedApp = await withCheckedContinuation { (continuation: CheckedContinuation<NSRunningApplication?, Never>) in
+            NSWorkspace.shared.openApplication(at: appURL, configuration: config) { app, _ in
+                continuation.resume(returning: app)
+            }
         }
 
-        let waitResult = semaphore.wait(timeout: .now() + 2.0)
-        guard waitResult == .success, let launchedApp else {
+        guard let launchedApp else {
             return nil
         }
         launchedApp.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
         return launchedApp
+    }
+
+    private func sleepMs(_ ms: UInt64) async {
+        try? await Task.sleep(nanoseconds: ms * 1_000_000)
     }
 }

@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 
+@MainActor
 final class AppCoordinator: NSObject {
     private let settingsStore = AppSettingsStore()
     private let permissionService = PermissionService()
@@ -73,7 +74,13 @@ final class AppCoordinator: NSObject {
             return
         }
         isRunning = true
+        Task { @MainActor in
+            await self.runSendSelectionFlow()
+        }
+    }
 
+    @MainActor
+    private func runSendSelectionFlow() async {
         let totalStart = Date()
         let session = clipboardService.beginSession()
 
@@ -119,7 +126,7 @@ final class AppCoordinator: NSObject {
         }
 
         let captureStart = Date()
-        let captureResult = captureService.captureSelection(session: session)
+        let captureResult = await captureService.captureSelection(session: session)
         captureMs = Int(Date().timeIntervalSince(captureStart) * 1000)
 
         capturePath = captureResult.capturePath?.rawValue ?? "none"
@@ -141,7 +148,7 @@ final class AppCoordinator: NSObject {
         }
 
         let deliveryStart = Date()
-        let deliveryResult = deliveryService.deliverText(transformed, to: settings.chatGPTBundleID, session: session)
+        let deliveryResult = await deliveryService.deliverText(transformed, to: settings.chatGPTBundleID, session: session)
         deliveryMs = Int(Date().timeIntervalSince(deliveryStart) * 1000)
 
         focusPath = deliveryResult.focusPath.rawValue
