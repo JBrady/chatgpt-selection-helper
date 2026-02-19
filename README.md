@@ -30,6 +30,12 @@ Standalone macOS menubar helper app that sends selected text from any app into t
 
 ## Build and Run (Xcode App Target)
 
+Prerequisite:
+
+```bash
+brew install xcodegen
+```
+
 Generate/open the Xcode project:
 
 ```bash
@@ -42,6 +48,19 @@ Build from CLI:
 ```bash
 xcodebuild -project ChatGPTSelectionHelperApp.xcodeproj -scheme ChatGPTSelectionHelper -configuration Debug build
 ```
+
+Run from CLI:
+
+```bash
+xcodebuild -project ChatGPTSelectionHelperApp.xcodeproj -scheme ChatGPTSelectionHelper -configuration Debug -destination 'platform=macOS' build
+open ~/Library/Developer/Xcode/DerivedData/ChatGPTSelectionHelperApp-*/Build/Products/Debug/ChatGPTSelectionHelper.app
+```
+
+Run from Xcode:
+
+1. Open `ChatGPTSelectionHelperApp.xcodeproj`
+2. Select scheme `ChatGPTSelectionHelper`
+3. Press Run (`Cmd+R`)
 
 Stable bundle ID: `com.johnbrady.chatgpt-selection-helper`
 
