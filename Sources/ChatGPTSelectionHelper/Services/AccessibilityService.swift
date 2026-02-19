@@ -45,20 +45,25 @@ final class AccessibilityService {
     }
 
     func isFocusedElementEditable(in app: NSRunningApplication?) -> Bool {
-        let system = AXUIElementCreateSystemWide()
-        guard let focused = copyAXElementAttribute(kAXFocusedUIElementAttribute as CFString, from: system) else {
+        guard let focused = focusedElement(in: app) else {
             return false
         }
+        return isEditableElement(focused)
+    }
 
-        if let app {
-            var pid: pid_t = 0
-            AXUIElementGetPid(focused, &pid)
-            if pid != app.processIdentifier {
-                return false
-            }
+    func focusedEditableValueLength(in app: NSRunningApplication?) -> Int? {
+        guard let focused = focusedElement(in: app), isEditableElement(focused) else {
+            return nil
         }
 
-        return isEditableElement(focused)
+        if let text = copyStringAttribute(kAXValueAttribute as CFString, from: focused) {
+            return text.count
+        }
+
+        guard let attributed = copyAttribute(kAXValueAttribute as CFString, from: focused) as? NSAttributedString else {
+            return nil
+        }
+        return attributed.string.count
     }
 
     func focusLikelyInputField(in app: NSRunningApplication) -> Bool {
@@ -130,7 +135,7 @@ final class AccessibilityService {
         guard let value = copyAttribute(attribute, from: element) else {
             return nil
         }
-        return value as! AXUIElement
+        return (value as! AXUIElement)
     }
 
     private func copyAXElementArrayAttribute(_ attribute: CFString, from element: AXUIElement) -> [AXUIElement]? {
@@ -143,5 +148,21 @@ final class AccessibilityService {
 
     private func copyBoolAttribute(_ attribute: CFString, from element: AXUIElement) -> Bool? {
         copyAttribute(attribute, from: element) as? Bool
+    }
+
+    private func focusedElement(in app: NSRunningApplication?) -> AXUIElement? {
+        let system = AXUIElementCreateSystemWide()
+        guard let focused = copyAXElementAttribute(kAXFocusedUIElementAttribute as CFString, from: system) else {
+            return nil
+        }
+
+        if let app {
+            var pid: pid_t = 0
+            AXUIElementGetPid(focused, &pid)
+            if pid != app.processIdentifier {
+                return nil
+            }
+        }
+        return focused
     }
 }
