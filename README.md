@@ -28,7 +28,26 @@ Standalone macOS menubar helper app that sends selected text from any app into t
   - `os.Logger` metadata-only run reports
   - Copy recent run summaries for bug reports
 
-## Build and Run
+## Build and Run (Xcode App Target)
+
+Generate/open the Xcode project:
+
+```bash
+xcodegen generate
+open ChatGPTSelectionHelperApp.xcodeproj
+```
+
+Build from CLI:
+
+```bash
+xcodebuild -project ChatGPTSelectionHelperApp.xcodeproj -scheme ChatGPTSelectionHelper -configuration Debug build
+```
+
+Stable bundle ID: `com.johnbrady.chatgpt-selection-helper`
+
+Code signing is configured as Automatic (Sign to Run Locally by default).
+
+## Build and Run (SwiftPM)
 
 ```bash
 swift build

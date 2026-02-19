@@ -41,4 +41,22 @@ struct CoreLogicTests {
         let outcome = restoreOutcomeDecision(currentChangeCount: 2, initialChangeCount: 2, latestFlowChangeCount: 5)
         #expect(outcome == .notNeeded)
     }
+
+    @Test
+    func pasteDeltaSuccessWhenLengthIncreases() {
+        let success = pasteValueDeltaSucceeded(beforeLength: 10, afterLength: 24)
+        #expect(success == true)
+    }
+
+    @Test
+    func pasteDeltaFailureWhenLengthDoesNotIncrease() {
+        let success = pasteValueDeltaSucceeded(beforeLength: 10, afterLength: 8)
+        #expect(success == false)
+    }
+
+    @Test
+    func pasteDeltaUnknownWhenValuesUnreadable() {
+        let success = pasteValueDeltaSucceeded(beforeLength: nil, afterLength: 5)
+        #expect(success == nil)
+    }
 }

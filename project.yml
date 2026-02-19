@@ -1,0 +1,36 @@
+name: ChatGPTSelectionHelperApp
+options:
+  minimumXcodeGenVersion: 2.44.1
+configs:
+  Debug: debug
+  Release: release
+settings:
+  base:
+    SWIFT_VERSION: 6.0
+    MACOSX_DEPLOYMENT_TARGET: 13.0
+targets:
+  ChatGPTSelectionHelper:
+    type: application
+    platform: macOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: Sources/ChatGPTSelectionHelper
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.johnbrady.chatgpt-selection-helper
+        PRODUCT_NAME: ChatGPTSelectionHelper
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: ChatGPTSelectionHelper
+        INFOPLIST_KEY_CFBundleName: ChatGPTSelectionHelper
+        INFOPLIST_KEY_LSUIElement: YES
+        INFOPLIST_KEY_NSAppleEventsUsageDescription: "This helper needs app automation access to activate ChatGPT."
+        INFOPLIST_KEY_NSHumanReadableCopyright: "Copyright © 2026 John Brady"
+  ChatGPTSelectionHelperTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: Tests/ChatGPTSelectionHelperTests
+    dependencies:
+      - target: ChatGPTSelectionHelper

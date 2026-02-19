@@ -149,3 +149,10 @@ func restoreOutcomeDecision(currentChangeCount: Int, initialChangeCount: Int, la
     }
     return .skippedUserChanged
 }
+
+func pasteValueDeltaSucceeded(beforeLength: Int?, afterLength: Int?) -> Bool? {
+    guard let beforeLength, let afterLength else {
+        return nil
+    }
+    return afterLength > beforeLength
+}

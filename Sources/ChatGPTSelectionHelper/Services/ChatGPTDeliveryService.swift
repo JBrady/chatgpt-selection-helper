@@ -27,14 +27,23 @@ final class ChatGPTDeliveryService {
 
         var focusPath: FocusPath = .assumedFocused
         var attempts = 0
+        var latestCount: Int?
+
+        if accessibility.focusLikelyInputField(in: app) {
+            focusPath = .axFocus
+            usleep(80_000)
+        }
+
+        let beforeFirstPasteLength = accessibility.focusedEditableValueLength(in: app)
 
         attempts += 1
         let firstCount = clipboard.setTemporaryString(text)
+        latestCount = firstCount
         session.noteFlowClipboardChange(firstCount)
         events.sendPasteShortcut()
         usleep(150_000)
 
-        if accessibility.isFocusedElementEditable(in: app) {
+        if verifyPasteSucceeded(in: app, beforeLength: beforeFirstPasteLength) {
             return DeliveryResult(
                 focusPath: focusPath,
                 pasteAttempts: attempts,
@@ -50,25 +59,38 @@ final class ChatGPTDeliveryService {
                 pasteAttempts: attempts,
                 pasteResult: .fail,
                 errorCode: .focusFailed,
-                changedCountAfterPasteboardWrite: firstCount
+                changedCountAfterPasteboardWrite: latestCount
             )
         }
 
         focusPath = .axFocus
+        let beforeSecondPasteLength = accessibility.focusedEditableValueLength(in: app)
         attempts += 1
         let secondCount = clipboard.setTemporaryString(text)
+        latestCount = secondCount
         session.noteFlowClipboardChange(secondCount)
         events.sendPasteShortcut()
         usleep(150_000)
 
-        let success = accessibility.isFocusedElementEditable(in: app)
+        let success = verifyPasteSucceeded(in: app, beforeLength: beforeSecondPasteLength)
         return DeliveryResult(
             focusPath: focusPath,
             pasteAttempts: attempts,
             pasteResult: success ? .success : .fail,
             errorCode: success ? .none : .pasteFailed,
-            changedCountAfterPasteboardWrite: secondCount
+            changedCountAfterPasteboardWrite: latestCount
         )
+    }
+
+    private func verifyPasteSucceeded(in app: NSRunningApplication, beforeLength: Int?) -> Bool {
+        let afterLength = accessibility.focusedEditableValueLength(in: app)
+        if let axDeltaSuccess = pasteValueDeltaSucceeded(beforeLength: beforeLength, afterLength: afterLength) {
+            return axDeltaSuccess
+        }
+
+        // Webview-backed inputs often do not expose value attributes reliably.
+        // Fall back to checking that an editable element in ChatGPT is focused.
+        return accessibility.isFocusedElementEditable(in: app)
     }
 
     private func activateOrLaunch(bundleID: String) -> NSRunningApplication? {
